@@ -1,0 +1,5 @@
+.terraform/
+*.exe
+*.lock.hcl
+*.tfstate*
+__pycache__/
