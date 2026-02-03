@@ -1,15 +1,15 @@
 pipeline {
     agent any
     
+    //let me delete the old infrastructure
     parameters {
-        //  Destroy 
-        booleanParam(name: 'DESTROY_INFRA', defaultValue: false, description: 'Check to destroy infrastructure instead of creating it')
+        booleanParam(name: 'DESTROY_INFRA', defaultValue: false, description: 'Check this to destroy infrastructure instead of creating it')
     }
 
     stages {
         stage('Checkout') {
             steps {
-               // Checkout repositories
+                //Pull new code
                 checkout scm
             }
         }
@@ -24,26 +24,31 @@ pipeline {
             steps {
                 script {
                     if (params.DESTROY_INFRA) {
-                        //  ( - Destroy stage)
-                        sh 'terraform destroy -auto-approve'
+                        //against crashs 
+                        echo "Destroying infrastructure..."
+                        sh 'terraform destroy -auto-approve -parallelism=1'
                     } else {
-                        // (infrastructure provisioning)
-                        sh 'terraform apply -auto-approve'
+                    
+                        echo "Provisioning infrastructure..."
+                        sh 'terraform apply -auto-approve -parallelism=1'
                     }
                 }
             }
         }
 
         stage('Plugin Validation') {
+            
             when {
                 expression { params.DESTROY_INFRA == false }
             }
             steps {
                 script {
-                    // ( Passing Terraform outputs)
+                    // take the new IP every time and save it
+                    echo "Fetching dynamic IP from Terraform..."
                     def serverIp = sh(script: "terraform output -raw instance_public_ip", returnStdout: true).trim()
                     
-                    // ( vulnerable instance deployment & verification)
+                
+                    echo "Running Reachability Plugin for IP: ${serverIp}"
                     sh "python3 CTFd/plugins/reachability_validator/__init__.py ${serverIp}"
                 }
             }
@@ -51,12 +56,12 @@ pipeline {
     }
 
     post {
-        //Clear logs and failure handling
+        //  Clear logs and failure handling
         success {
-            echo "Pipeline completed successfully!"
+            echo "Pipeline completed successfully! All stages passed."
         }
         failure {
-            echo "Pipeline failed. Check Terraform logs or connectivity."
+            echo "Pipeline failed. Please check the Console Output for Terraform or Python errors."
         }
     }
 }
