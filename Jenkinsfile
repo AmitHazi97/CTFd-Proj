@@ -45,7 +45,8 @@ pipeline {
                 script {
                     // Ensuring all Python dependencies are present on the Jenkins host
                     echo "Ensuring Python dependencies are installed (pip3 and Flask)..."
-                
+                    
+                    // Using sudo with -y for automated installation, avoiding environment variable errors
                     sh "sudo apt-get update -y && sudo apt-get install -y python3-pip"
                     sh "pip3 install flask --user"
                     
@@ -59,9 +60,9 @@ pipeline {
                     
                     echo "Running Reachability Plugin for Target IP: ${serverIp}"
                     
-                    // Using find to dynamically locate the plugin script and execute it
+                    // Setting PYTHONPATH to include the current workspace so Python finds the CTFd module
                     timeout(time: 2, unit: 'MINUTES') {
-                        sh "python3 \$(find . -name '__init__.py' | grep reachability_validator) ${serverIp}"
+                        sh "export PYTHONPATH=\$PYTHONPATH:\$(pwd) && python3 \$(find . -name '__init__.py' | grep reachability_validator) ${serverIp}"
                     }
                 }
             }
@@ -70,9 +71,11 @@ pipeline {
 
     post {
         success {
+            // Notification for a fully successful automation cycle
             echo "Pipeline completed successfully! All requirements for Section 6 are met."
         }
         failure {
+            // Error handling notification
             echo "Pipeline failed. Check Terraform logs, Python dependencies, or target connectivity."
         }
     }
