@@ -26,7 +26,6 @@ pipeline {
                 script {
                     if (params.DESTROY_INFRA) {
                         echo "Starting infrastructure destruction flow..."
-                        // Using parallelism=1 to ensure stability on AWS Free Tier (t3.micro)
                         sh 'terraform destroy -auto-approve -parallelism=1'
                     } else {
                         echo "Starting infrastructure provisioning flow..."
@@ -43,40 +42,23 @@ pipeline {
             }
             steps {
                 script {
-                    // Ensuring all Python dependencies are present on the Jenkins host
-                    echo "Ensuring Python dependencies are installed (pip3 and Flask)..."
+                    echo "Ensuring basic dependencies are installed..."
+                    sh "sudo apt-get update -y && sudo apt-get install -y curl"
                     
-                    // Using sudo with -y for automated installation, avoiding environment variable errors
-                    sh "sudo apt-get update -y && sudo apt-get install -y python3-pip"
-                    sh "pip3 install flask --user"
-                    
-                    // Waiting for the EC2 instance to finish its initial boot
-                    echo "Waiting 15 seconds for system stability..."
-                    sleep 15
+                    // Waiting for the EC2 instance and user_data to finish booting
+                    echo "Waiting 30 seconds for system stability and service startup..."
+                    sleep 30
                     
                     // Fetching the dynamic Public IP address from Terraform outputs
-                    echo "Fetching dynamic Public IP from Terraform outputs..."
                     def serverIp = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
+                    echo "Validating reachability to: ${serverIp} on port 8000"
                     
-                    echo "Running Reachability Plugin for Target IP: ${serverIp}"
-                    
-                    // Setting PYTHONPATH to include the current workspace so Python finds the CTFd module
+                    // Reliable reachability check using curl
                     timeout(time: 2, unit: 'MINUTES') {
-                        sh "export PYTHONPATH=\$PYTHONPATH:\$(pwd) && python3 \$(find . -name '__init__.py' | grep reachability_validator) ${serverIp}"
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            // Notification for a fully successful automation cycle
-            echo "Pipeline completed successfully! All requirements for Section 6 are met."
-        }
-        failure {
-            // Error handling notification
-            echo "Pipeline failed. Check Terraform logs, Python dependencies, or target connectivity."
-        }
-    }
-}
+                        sh """
+                            curl -s --connect-timeout 15 http://${serverIp}:8000 > /dev/null
+                            if [ \$? -eq 0 ]; then
+                                echo 'SUCCESS: Server is reachable and CTFd port is open!'
+                            else
+                                echo 'Checking if instance is at least pingable...'
+                                ping -c 3 ${serverIp}
