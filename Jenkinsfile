@@ -5,6 +5,13 @@ pipeline {
         booleanParam(name: 'DESTROY_INFRA', defaultValue: false, description: 'Check this to destroy infrastructure')
     }
 
+    // זה החלק שהיה חסר ומקשר בין ה-Credentials ל-Pipeline
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_DEFAULT_REGION    = 'eu-central-1' 
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -24,7 +31,8 @@ pipeline {
                     if (params.DESTROY_INFRA) {
                         sh 'terraform destroy -auto-approve -parallelism=1'
                     } else {
-                        sh 'terraform apply -auto-approve -parallelism=1'
+                        // הוספת -input=false כדי למנוע מהתהליך להמתין לקלט ידני
+                        sh 'terraform apply -auto-approve -parallelism=1 -input=false'
                     }
                 }
             }
