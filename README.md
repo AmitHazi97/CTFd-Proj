@@ -17,22 +17,23 @@ The deployment creates a completely isolated environment to ensure security and 
 
 
 
-* **Isolated VPC**: Dedicated CIDR (`10.0.0.0/16`) separate from the default Jenkins network.
+* **Isolated VPC**: A dedicated CIDR (`10.0.0.0/16`) was implemented to ensure zero IP conflicts with the Jenkins controller and to isolate the vulnerable infrastructure.
 * **Security Groups**:
-    * **Port 8000**: Inbound access for CTFd Web UI.
-    * **Port 22**: Inbound SSH for management.
-* **Stability Enhancements**:
-    * **2GB Swap File**: Added to prevent OOM (Out of Memory) crashes during provisioning.
-    * **Parallelism Control**: Terraform runs with `-parallelism=1` to conserve resources on micro-instances.
+    * **Port 8000**: Inbound access for the CTFd Web UI.
+    * **Port 22**: Inbound SSH for administrative tasks and "Escape the Box" style challenges.
+* **Stability Enhancements (Optimized for t3.micro)**:
+    * **2GB Swap File**: Manually configured within the **Ubuntu 24.04** host to provide memory resilience and prevent OOM (Out of Memory) crashes during the `terraform apply` phase.
+    * **Parallelism Control**: Terraform execution is limited to `-parallelism=1` to minimize CPU and RAM spikes on micro-instances.
 
 ---
 
 ## 🛠️ Environment Prerequisites
-The pipeline is designed to run on a Custom AMI (Ubuntu 24.04 LTS) with:
-* **Jenkins**: Orchestrates the workflow.
-* **Terraform (v1.0+)**: Manages AWS resources.
-* **AWS CLI**: For secure API authentication.
-* **Docker**: To host the CTFd application.
+The pipeline is executed on a **Custom AMI** based on **Ubuntu 24.04 LTS**, pre-configured with the following DevOps toolchain to ensure seamless integration:
+
+* **Jenkins**: Orchestrates the entire CI/CD workflow and manages environment-specific credentials.
+* **Terraform (v1.0+)**: Utilized for Infrastructure as Code (IaC) to provision and manage all 7 AWS resources.
+* **AWS CLI**: Integrated for secure, IAM-based API authentication between the controller and the cloud provider.
+* **Docker**: Installed on the target server via User Data to host and manage the CTFd application containers.
 
 ---
 
