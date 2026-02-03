@@ -45,10 +45,11 @@ pipeline {
                 script {
                     // Ensuring all Python dependencies are present on the Jenkins host
                     echo "Ensuring Python dependencies are installed (pip3 and Flask)..."
-                    sh "sudo apt update && sudo apt install -y python3-pip"
+                    // Added a command to install pip if it is missing on the server with non-interactive flags
+                    sh "sudo DEBIAN_FRONTEND=noninteractive apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y python3-pip"
                     sh "pip3 install flask --user"
                     
-                    // Waiting for the EC2 instance to finish its initial boot and user_data execution
+                    // Waiting for the EC2 instance to finish its initial boot
                     echo "Waiting 15 seconds for system stability..."
                     sleep 15
                     
@@ -69,11 +70,9 @@ pipeline {
 
     post {
         success {
-            // Notification for a fully successful automation cycle
             echo "Pipeline completed successfully! All requirements for Section 6 are met."
         }
         failure {
-            // Error handling notification
             echo "Pipeline failed. Check Terraform logs, Python dependencies, or target connectivity."
         }
     }
