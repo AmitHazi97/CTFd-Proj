@@ -80,7 +80,7 @@ The server is pre-configured with a privilege escalation vulnerability:
 ├── variables.tf           # Environment variables
 └── modules/
     └── networking/        # VPC, Subnets, and Security Groups
-
+```
  ---
 
 ## 🧹 Tearing Down
