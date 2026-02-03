@@ -45,8 +45,8 @@ pipeline {
                 script {
                     // Ensuring all Python dependencies are present on the Jenkins host
                     echo "Ensuring Python dependencies are installed (pip3 and Flask)..."
-                    // Added a command to install pip if it is missing on the server with non-interactive flags
-                    sh "sudo DEBIAN_FRONTEND=noninteractive apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y python3-pip"
+                
+                    sh "sudo apt-get update -y && sudo apt-get install -y python3-pip"
                     sh "pip3 install flask --user"
                     
                     // Waiting for the EC2 instance to finish its initial boot
