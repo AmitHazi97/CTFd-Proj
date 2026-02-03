@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     parameters {
-        //  Destroy נשלט על ידי פרמטר
+        //  Destroy 
         booleanParam(name: 'DESTROY_INFRA', defaultValue: false, description: 'Check to destroy infrastructure instead of creating it')
     }
 
