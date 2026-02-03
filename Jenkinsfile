@@ -46,7 +46,7 @@ pipeline {
                     sleep 15
                     
                     echo "Fetching dynamic Public IP from Terraform outputs..."
-                    def serverIp = sh(script: "terraform output -raw instance_public_ip", returnStdout: true).trim()
+                    def serverIp = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
                     
                     echo "Running Reachability Plugin for Target IP: ${serverIp}"
                     
