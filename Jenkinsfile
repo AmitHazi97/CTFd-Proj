@@ -9,14 +9,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Pulling the latest code from the repository
+                // Pulling the latest code from the GitHub repository
                 checkout scm
             }
         }
 
         stage('Terraform Init') {
             steps {
-                // Initializing Terraform backend and providers
+                // Initializing Terraform backend and downloading required providers
                 sh 'terraform init'
             }
         }
@@ -26,7 +26,7 @@ pipeline {
                 script {
                     if (params.DESTROY_INFRA) {
                         echo "Starting infrastructure destruction flow..."
-                        // Using parallelism=1 to prevent t2.micro CPU exhaustion
+                        // Using parallelism=1 to ensure stability on AWS Free Tier (t3.micro)
                         sh 'terraform destroy -auto-approve -parallelism=1'
                     } else {
                         echo "Starting infrastructure provisioning flow..."
@@ -38,25 +38,27 @@ pipeline {
 
         stage('Plugin Validation') {
             when {
+                // Only run validation if we are not destroying the infrastructure
                 expression { params.DESTROY_INFRA == false }
             }
             steps {
                 script {
-                    // Installing required Python dependencies for the validator
-                    echo "Installing plugin dependencies (Flask)..."
+                    // Ensuring all Python dependencies are present on the Jenkins host
+                    echo "Ensuring Python dependencies are installed (pip3 and Flask)..."
+                    sh "sudo apt update && sudo apt install -y python3-pip"
                     sh "pip3 install flask --user"
                     
-                    // Waiting for system stability to ensure the EC2 instance is fully initialized
+                    // Waiting for the EC2 instance to finish its initial boot and user_data execution
                     echo "Waiting 15 seconds for system stability..."
                     sleep 15
                     
-                    // Fetching the dynamic Public IP from Terraform outputs
+                    // Fetching the dynamic Public IP address from Terraform outputs
                     echo "Fetching dynamic Public IP from Terraform outputs..."
                     def serverIp = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
                     
                     echo "Running Reachability Plugin for Target IP: ${serverIp}"
                     
-                    // Executing the validator script using a dynamic path search
+                    // Using find to dynamically locate the plugin script and execute it
                     timeout(time: 2, unit: 'MINUTES') {
                         sh "python3 \$(find . -name '__init__.py' | grep reachability_validator) ${serverIp}"
                     }
@@ -67,9 +69,11 @@ pipeline {
 
     post {
         success {
+            // Notification for a fully successful automation cycle
             echo "Pipeline completed successfully! All requirements for Section 6 are met."
         }
         failure {
+            // Error handling notification
             echo "Pipeline failed. Check Terraform logs, Python dependencies, or target connectivity."
         }
     }
