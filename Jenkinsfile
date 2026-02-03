@@ -16,6 +16,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
+                // Initializing Terraform backend and providers
                 sh 'terraform init'
             }
         }
@@ -25,7 +26,7 @@ pipeline {
                 script {
                     if (params.DESTROY_INFRA) {
                         echo "Starting infrastructure destruction flow..."
-                        // Using parallelism=1 to prevent t2.micro CPU exhaustion
+                        // Using parallelism=1 to prevent t2.micro CPU exhaustion on AWS Free Tier
                         sh 'terraform destroy -auto-approve -parallelism=1'
                     } else {
                         echo "Starting infrastructure provisioning flow..."
@@ -41,18 +42,19 @@ pipeline {
             }
             steps {
                 script {
-                    // Critical: Wait for system stability before running scripts on a weak instance
+                    // Waiting for system stability to prevent the instance from freezing
                     echo "Waiting 15 seconds for system stability..."
                     sleep 15
                     
+                    // Fetching the dynamic Public IP directly from Terraform outputs
                     echo "Fetching dynamic Public IP from Terraform outputs..."
                     def serverIp = sh(script: "terraform output -raw public_ip", returnStdout: true).trim()
                     
                     echo "Running Reachability Plugin for Target IP: ${serverIp}"
                     
-                    // Safety: Prevent the pipeline from hanging indefinitely if the target is unreachable
                     timeout(time: 2, unit: 'MINUTES') {
-                        sh "python3 CTFd/plugins/reachability_validator/__init__.py ${serverIp}"
+                        // Dynamically locating the validator script to avoid path errors
+                        sh "python3 \$(find . -name '__init__.py' | grep reachability_validator) ${serverIp}"
                     }
                 }
             }
@@ -61,9 +63,11 @@ pipeline {
 
     post {
         success {
+            // Success notification
             echo "Pipeline completed successfully! All requirements for Section 6 are met."
         }
         failure {
+            // Failure notification with troubleshooting advice
             echo "Pipeline failed. Check Terraform logs or connectivity to the target instance."
         }
     }
